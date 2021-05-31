@@ -1,1 +1,2 @@
-# GCU_Capstone
+# User Guide
+
