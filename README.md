@@ -1,3 +1,4 @@
+Note: having issues connecting git and vscode - several files and paths not committed/pushed at the moment
 # User Guide
 
 #### Preface 
