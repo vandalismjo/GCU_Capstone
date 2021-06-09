@@ -1,2 +1,12 @@
 pandas
 numpy
+scipy
+pillow
+supyr-struct
+opencv-python
+tensorflow
+keras
+scikit-image
+matplotlib
+seaborn
+ipykernel

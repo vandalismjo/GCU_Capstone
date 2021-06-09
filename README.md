@@ -1,90 +1,145 @@
-Note: having issues connecting git and vscode - several files and paths not committed/pushed at the moment
-# User Guide
+# mAP (mean Average Precision)
 
-#### Preface 
+[![GitHub stars](https://img.shields.io/github/stars/Cartucho/mAP.svg?style=social&label=Stars)](https://github.com/Cartucho/mAP)
 
-#### Table of contents 
+This code will evaluate the performance of your neural net for object recognition.
 
-  General Information 
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/15831541/37559643-6738bcc8-2a21-11e8-8a07-ed836f19c5d9.gif" width="450" height="300" />
+</p>
 
-  System Summary 
+In practice, a **higher mAP** value indicates a **better performance** of your neural net, given your ground-truth and set of classes.
 
-  Using the System 
+## Citation
 
-  Troubleshooting  
+This project was developed for the following paper, please consider citing it:
 
-  FAQ  
+```bibtex
+@INPROCEEDINGS{8594067,
+  author={J. {Cartucho} and R. {Ventura} and M. {Veloso}},
+  booktitle={2018 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, 
+  title={Robust Object Recognition Through Symbiotic Deep Learning In Mobile Robots}, 
+  year={2018},
+  pages={2336-2341},
+}
+```
 
-  Help   
+## Table of contents
 
-  Glossary 
+- [Explanation](#explanation)
+- [Prerequisites](#prerequisites)
+- [Quick start](#quick-start)
+- [Running the code](#running-the-code)
+- [Authors](#authors)
 
- 
+## Explanation
+The performance of your neural net will be judged using the mAP criterium defined in the [PASCAL VOC 2012 competition](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/). We simply adapted the [official Matlab code](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/#devkit) into Python (in our tests they both give the same results).
 
-#### General Information 
+First (**1.**), we calculate the Average Precision (AP), for each of the classes present in the ground-truth. Finally (**2.**), we calculate the mAP (mean Average Precision) value.
 
-  The high level steps of the project repository is to read in data and weights, initialize model, import labels, add bounding boxes to images, compile new frames to video, output scores, generate model score, plot model metrics. 
+#### 1. Calculate AP
 
-  YOLO v3 is using a new network to perform feature extraction which is undeniably larger compare to YOLO v2. This network is known as Darknet-53 as the whole network composes of 53 convolutional layers with shortcut connections (Redmon & Farhadi, 2018). 
+For each class:
 
-#### System Summary 
+First, your neural net **detection-results** are sorted by decreasing confidence and are assigned to **ground-truth objects**. We have "a match" when they share the **same label and an IoU >= 0.5** (Intersection over Union greater than 50%). This "match" is considered a true positive if that ground-truth object has not been already used (to avoid multiple detections of the same object). 
 
-  The format, and summary, of the Yolo3.main.py script is as follows: 
+<img src="https://user-images.githubusercontent.com/15831541/37725175-45b9e1a6-2d2a-11e8-8c15-2fb4d716ca9a.png" width="35%" height="35%" />
 
-    - Import all necessary libraries and dependencies. 
+Using this criterium, we calculate the precision/recall curve. E.g:
 
-    - WeightReader class is used to parse the “yolov3.weights” file and load the model weights into memory. 
+<img src="https://user-images.githubusercontent.com/15831541/43008995-64dd53ce-8c34-11e8-8a2c-4567b1311910.png" width="45%" height="45%" />
 
-    - Set up 53 convolutional layers with shortcut connections. 
+Then we compute a version of the measured precision/recall curve with **precision monotonically decreasing** (shown in light red), by setting the precision for recall `r` to the maximum precision obtained for any recall `r' > r`.
 
-    - The _conv_block function is used to construct a convolutional layer 
+Finally, we compute the AP as the **area under this curve** (shown in light blue) by numerical integration.
+No approximation is involved since the curve is piecewise constant.
 
-    - The make_yolov3_model function is used to create layers of convolutional and stack together as a whole. 
+#### 2. Calculate mAP
 
-    - Define the YOLO v3 model 
+We calculate the mean of all the AP's, resulting in an mAP value from 0 to 100%. E.g:
 
-    - Load the pre-trained weights  
+<img src="https://user-images.githubusercontent.com/15831541/38933241-5f9556ae-4310-11e8-9d47-cb205f9b103b.png"/>
 
-    - Save the model using Keras save function and specifying the filename 
+<img src="https://user-images.githubusercontent.com/15831541/38933180-366b6fca-4310-11e8-99b9-17ad4b159b86.png" />
 
-    - The decode_netout function is used to decode the prediction output into boxes 
+## Prerequisites
 
-    - Scale and stretch the decoded boxes to be fit into the original image shape 
+You need to install:
+- [Python](https://www.python.org/downloads/)
 
-    - The bbox_iou function is used to calculate the IOU (Intersection over Union) by getting the _interval_overlap of two boxes 
+Optional:
+- **plot** the results by [installing Matplotlib](https://matplotlib.org/users/installing.html) - Linux, macOS and Windows:
+    1. `python -mpip install -U pip`  
+    2.  `python -mpip install -U matplotlib`
+-  show **animation** by installing [OpenCV](https://www.opencv.org/):
+    1. `python -mpip install -U pip`
+    2. `python -mpip install -U opencv-python`  
 
-    - The do_nms function is used to perform NMS 
+## Quick-start
+To start using the mAP you need to clone the repo:
 
-      - NMS is performed as follows: 
+```
+git clone https://github.com/Cartucho/mAP
+```
 
-        - Select the box that has the highest score. 
+## Running the code
 
-        - Calculate the interval overlap of this box with other boxes, and omit the boxes that overlap significantly (iou >= iou_threshold). 
+Step by step:
 
-        - Repeat to step 1 and iterate until there are no more boxes with a lower score than the currently selected box.  
+  1. [Create the ground-truth files](#create-the-ground-truth-files)
+  2. Copy the ground-truth files into the folder **input/ground-truth/**
+  3. [Create the detection-results files](#create-the-detection-results-files)
+  4. Copy the detection-results files into the folder **input/detection-results/**
+  5. Run the code:
+         ```
+         python main.py
+         ```
 
-    - The get_boxes function is used to obtain the boxes which have been selected through NMS filter 
+Optional (if you want to see the **animation**):
 
-    - The draw_boxes function is used to draw a rectangle box to the input image using matplotlib.patches.Rectangle class 
+  6. Insert the images into the folder **input/images-optional/**
 
-    - Declare several configurations: 
 
-      - Anchors: carefully chosen based on an analysis of the size of objects in the COCO dataset. 
+#### PASCAL VOC, Darkflow and YOLO users
 
-      - Class_threshold: the probability threshold for detected objects 
+In the [scripts/extra](https://github.com/Cartucho/mAP/tree/master/scripts/extra) folder you can find additional scripts to convert **PASCAL VOC**, **darkflow** and **YOLO** files into the required format.
 
-      - Labels: class labels from the COCO dataset 
+#### Create the ground-truth files
 
-    - Iterate over input frames to make predictions. 
+- Create a separate ground-truth text file for each image.
+- Use **matching names** for the files (e.g. image: "image_1.jpg", ground-truth: "image_1.txt").
+- In these files, each line should be in the following format:
+    ```
+    <class_name> <left> <top> <right> <bottom> [<difficult>]
+    ```
+- The `difficult` parameter is optional, use it if you want the calculation to ignore a specific detection.
+- E.g. "image_1.txt":
+    ```
+    tvmonitor 2 10 173 238
+    book 439 157 556 241
+    book 437 246 518 351 difficult
+    pottedplant 272 190 316 259
+    ```
 
-#### Using the System 
+#### Create the detection-results files
 
-  The repository will generate all needed results by running the single main jupyter notebook in the root directory. There are several configurations that can be modified like file paths inside the ‘main_config.yaml’ file. The project will output all needed plots, visualizations, and scores throughout the notebook. 
+- Create a separate detection-results text file for each image.
+- Use **matching names** for the files (e.g. image: "image_1.jpg", detection-results: "image_1.txt").
+- In these files, each line should be in the following format:
+    ```
+    <class_name> <confidence> <left> <top> <right> <bottom>
+    ```
+- E.g. "image_1.txt":
+    ```
+    tvmonitor 0.471781 0 13 174 244
+    cup 0.414941 274 226 301 265
+    book 0.460851 429 219 528 247
+    chair 0.292345 0 199 88 436
+    book 0.269833 433 260 506 336
+    ```
+## Authors:
+* **João Cartucho**
 
-#### Troubleshooting 
+    Feel free to contribute
 
-#### FAQ 
-
-#### Help 
-
-#### Glossary 
+    [![GitHub contributors](https://img.shields.io/github/contributors/Cartucho/mAP.svg)](https://github.com/Cartucho/mAP/graphs/contributors)
